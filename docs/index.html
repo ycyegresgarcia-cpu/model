@@ -144,13 +144,14 @@
       margin-top: 10px;
     }
     
-    .btn-analyze:hover {
+    .btn-analyze:hover:not(:disabled) {
       background-color: #b22217;
     }
     
     .btn-analyze:disabled {
       background-color: #cccccc;
       cursor: not-allowed;
+      opacity: 0.7;
     }
     
     .loading {
@@ -172,6 +173,31 @@
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
+    }
+    
+    .model-status {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .model-status.loading {
+      background-color: #e3f2fd;
+      color: var(--primary);
+    }
+    
+    .model-status.success {
+      background-color: #e8f5e9;
+      color: var(--low);
+    }
+    
+    .model-status.error {
+      background-color: #ffebee;
+      color: var(--critical);
     }
     
     /* Mapa */
@@ -351,6 +377,14 @@
       </div>
       
       <div class="section">
+        <h2><i class="fas fa-brain"></i> Estado del Modelo</h2>
+        <div id="model-status" class="model-status loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>Cargando modelo CNN-LSTM...</span>
+        </div>
+      </div>
+      
+      <div class="section">
         <h2><i class="fas fa-map-marked-alt"></i> Zona Geográfica</h2>
         <div class="radio-option">
           <input type="radio" id="valle_central" name="zona" value="valle_central" checked>
@@ -417,7 +451,7 @@
       </div>
       
       <div class="section">
-        <button id="btn-analyze" class="btn-analyze">
+        <button id="btn-analyze" class="btn-analyze" disabled>
           <i class="fas fa-search"></i> ANALIZAR RIESGO
         </button>
         
@@ -489,6 +523,8 @@
           integrity="sha256-p4NxA76iV4Li19fHCp9I8l9Jj3V5k8Xm8cYHm6Q6qQ3j8=" 
           crossorigin=""></script>
   <script src="https://unpkg.com/parse@3.5.0/dist/parse.min.js"></script>
+  <!-- TensorFlow.js - Versión compatible con modelos Keras -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
   
   <script>
     // Configuración de Back4App
@@ -507,6 +543,8 @@
     let marker;
     let polygon;
     let resultsPanel;
+    let modelLoaded = false;
+    let model;
     
     // Coordenadas de zonas del Libertador
     const zonesGeo = {
@@ -559,6 +597,9 @@
       
       // Configurar eventos
       setupEventListeners();
+      
+      // Cargar modelo (asíncrono)
+      loadModel();
     });
     
     function initMap() {
@@ -662,38 +703,105 @@
       });
     }
     
+    // ==================== CARGA DEL MODELO ====================
+    async function loadModel() {
+      const statusEl = document.getElementById('model-status');
+      const btnAnalyze = document.getElementById('btn-analyze');
+      
+      try {
+        console.log("🔄 Iniciando carga del modelo CNN-LSTM...");
+        statusEl.className = "model-status loading";
+        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelo CNN-LSTM...</span>`;
+        
+        // Intentar cargar el modelo desde la ruta correcta para GitHub Pages
+        // El modelo debe estar en: public/model/model.json y shards
+        model = await tf.loadLayersModel('/model/model.json');
+        
+        console.log("✅ Modelo CNN-LSTM cargado exitosamente");
+        statusEl.className = "model-status success";
+        statusEl.innerHTML = `<i class="fas fa-check-circle"></i> <span>Modelo CNN-LSTM listo para análisis</span>`;
+        modelLoaded = true;
+        
+        // Habilitar botón de análisis
+        btnAnalyze.disabled = false;
+        
+        return true;
+      } catch (error) {
+        console.error("❌ Error al cargar el modelo:", error);
+        
+        // Mostrar estado de error pero habilitar botón con simulación
+        statusEl.className = "model-status error";
+        statusEl.innerHTML = `
+          <i class="fas fa-exclamation-triangle"></i> 
+          <span>Modelo no disponible. Usando simulación realista.</span>
+          <div style="font-size: 0.8rem; margin-top: 5px; color: #d32f2f;">
+            Para usar el modelo real: Verifica que los archivos del modelo están en /model/
+          </div>
+        `;
+        
+        // Habilitar botón pero con advertencia
+        btnAnalyze.disabled = false;
+        modelLoaded = false;
+        
+        return false;
+      }
+    }
+    
+    // ==================== ANÁLISIS DE RIESGO ====================
     function analyzeRisk() {
       const btn = document.getElementById('btn-analyze');
       const loading = document.getElementById('loading');
       
-      // Deshabilitar botón
+      // Deshabilitar botón durante análisis
       btn.disabled = true;
-      btn.classList.add('btn-analyze-disabled');
       
       // Mostrar loading
       loading.style.display = 'block';
       
-      // Simular tiempo de procesamiento
+      // Ejecutar análisis (asíncrono)
       setTimeout(() => {
-        // Ejecutar análisis
         executeAnalysis();
         
         // Volver a habilitar botón
         btn.disabled = false;
-        btn.classList.remove('btn-analyze-disabled');
         
         // Ocultar loading
         loading.style.display = 'none';
-      }, 1200);
+      }, 500);
     }
     
-    function executeAnalysis() {
-      // Simular predicción (en producción: llamar al modelo TensorFlow.js)
-      const prob = simulatePrediction();
+    async function executeAnalysis() {
+      let prob, nivel, colorClass, accion;
       
-      // Determinar nivel de riesgo
-      let nivel, colorClass, accion;
+      if (modelLoaded && model) {
+        // ==================== USAR MODELO REAL ====================
+        try {
+          console.log("🧠 Ejecutando predicción con modelo CNN-LSTM...");
+          
+          // Preparar entradas (mismo formato que en Python)
+          const parche = crearParcheDummy(zonaActual);
+          const secuencia = crearSecuenciaClimatica(climaActual);
+          
+          // Hacer predicción
+          // El modelo espera dos entradas: [secuencia_temporal, parche_espacial]
+          const prediction = model.predict([secuencia, parche]);
+          const probArray = await prediction.data();
+          prob = probArray[0];
+          
+          console.log(`✅ Predicción exitosa: ${prob.toFixed(4)}`);
+          
+        } catch (error) {
+          console.error("❌ Error en la predicción con modelo:", error);
+          // Fallback a simulación
+          prob = simulatePrediction();
+        }
+      } else {
+        // ==================== USAR SIMULACIÓN ====================
+        console.log("🎲 Usando simulación realista (modelo no disponible)");
+        prob = simulatePrediction();
+      }
       
+      // Clasificar riesgo
       if (prob >= 0.7) {
         nivel = "CRÍTICO";
         colorClass = "critical";
@@ -722,8 +830,9 @@
       highlightRiskZone();
     }
     
+    // ==================== FUNCIONES DE SIMULACIÓN ====================
     function simulatePrediction() {
-      // Simular predicción con lógica realista
+      // Simular predicción con lógica realista (mismo que en Python)
       const baseRisk = {
         "valle_central": 0.10,
         "ladera_vulnerable": 0.45,
@@ -747,6 +856,70 @@
       return prob;
     }
     
+    // ==================== FUNCIONES PARA EL MODELO ====================
+    function crearParcheDummy(zona) {
+      // Crear tensor 4D: [1, 24, 24, 4]
+      // Mismo algoritmo que en Python
+      const valuesMap = {
+        "valle_central": [0.05, 0.15, 0.1, 0.25, 0.3, 0.5, 0.8, 1.0],
+        "ladera_vulnerable": [0.2, 0.35, 0.4, 0.7, 0.1, 0.3, 0.6, 0.8],
+        "cerro_pendiente": [0.45, 0.55, 0.6, 0.9, 0.2, 0.4, 0.5, 0.7],
+        "quebrada": [0.1, 0.25, 0.3, 0.6, 0.0, 0.07, 0.4, 0.6],
+        "seguro": [0.05, 0.15, 0.0, 0.1, 0.7, 1.0, 0.8, 1.0]
+      };
+      
+      const values = valuesMap[zona] || valuesMap["valle_central"];
+      const data = new Float32Array(24 * 24 * 4);
+      
+      for (let i = 0; i < data.length; i++) {
+        const channel = Math.floor(i / (24 * 24));
+        const rand = Math.random();
+        
+        if (channel === 0) data[i] = values[0] + rand * (values[1] - values[0]);
+        else if (channel === 1) data[i] = values[2] + rand * (values[3] - values[2]);
+        else if (channel === 2) data[i] = values[4] + rand * (values[5] - values[4]);
+        else data[i] = values[6] + rand * (values[7] - values[6]);
+      }
+      
+      return tf.tensor4d(data, [1, 24, 24, 4]);
+    }
+    
+    function crearSecuenciaClimatica(clima) {
+      // Crear tensor 3D: [1, 24, 5]
+      // Mismo algoritmo que en Python
+      const baseValues = {
+        "seco": [0, 0.5, 24, 28, 60, 75],
+        "moderado": [1.5, 1.2, 25, 1, 75, 5],
+        "intenso": [2.5, 2.0, 24, 0.2, 80, 4],
+        "extremo": [4, 3, 23, 0.3, 85, 3],
+        "creciente": [0.2, 3.0, 25, 0.15, 70, 6]
+      };
+      
+      const values = baseValues[clima] || baseValues["moderado"];
+      const data = new Float32Array(24 * 5);
+      
+      for (let i = 0; i < 24; i++) {
+        const basePrecip = values[0] + Math.random() * values[1];
+        const precip = i < 16 ? basePrecip : basePrecip + Math.random() * 2;
+        
+        const temp = values[2] - values[3] * precip + Math.random();
+        const humedad = values[4] + values[5] * precip + Math.random();
+        
+        // Acumulados (simplificado para frontend)
+        const acum24h = precip * 3;
+        const acum72h = precip * 3;
+        
+        data[i * 5 + 0] = precip;
+        data[i * 5 + 1] = temp;
+        data[i * 5 + 2] = humedad;
+        data[i * 5 + 3] = acum24h;
+        data[i * 5 + 4] = acum72h;
+      }
+      
+      return tf.tensor3d(data, [1, 24, 5]);
+    }
+    
+    // ==================== ACTUALIZACIÓN DE RESULTADOS ====================
     function updateResults(nivel, prob, accion, colorClass) {
       // Actualizar UI
       document.getElementById('risk-level').textContent = nivel;
