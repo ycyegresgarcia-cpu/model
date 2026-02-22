@@ -715,7 +715,11 @@
         
         // Intentar cargar el modelo desde la ruta correcta para GitHub Pages
         // El modelo debe estar en: public/model/model.json y shards
-        model = await tf.loadLayersModel('/model/mejor_modelo_libertador.json');
+        // CORRECTO para .keras
+        async function loadModel() {
+        const model = await tf.loadLayersModel('/model/mejor_modelo_libertador.keras');
+        return model;
+        }
         
         console.log("✅ Modelo CNN-LSTM cargado exitosamente");
         statusEl.className = "model-status success";
