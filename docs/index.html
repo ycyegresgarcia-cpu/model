@@ -713,30 +713,21 @@
         statusEl.className = "model-status loading";
         statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelo CNN-LSTM...</span>`;
         
-        // Verificar si estamos en GitHub Pages
-        const isGitHubPages = window.location.hostname.includes('github.io');
+        // RUTA CORRECTA: El modelo está directamente en la raíz del sitio web
+        const modelPath = '/mejor_modelo_libertador.keras';
         
-        // Ruta del modelo (correcta para GitHub Pages)
-        let modelPath;
-        if (isGitHubPages) {
-          // Para GitHub Pages
-          modelPath = '/model/mejor_modelo_libertador.keras';
-          
-          // Verificar si el modelo es accesible
-          const response = await fetch(modelPath);
-          if (!response.ok) {
-            console.error(`❌ Modelo no encontrado en ${modelPath} (Status: ${response.status})`);
-            
-            // Intentar con ruta alternativa
-            modelPath = '/docs/model/mejor_modelo_libertador.keras';
-            const altResponse = await fetch(modelPath);
-            if (!altResponse.ok) {
-              throw new Error("Modelo no encontrado en ninguna ruta");
-            }
-          }
-        } else {
-          // Para desarrollo local
-          modelPath = '/model/mejor_modelo_libertador.keras';
+        // Verificar si el modelo es accesible
+        const response = await fetch(modelPath);
+        if (!response.ok) {
+          console.error(`❌ Modelo no encontrado en ${modelPath} (Status: ${response.status})`);
+          throw new Error(`El modelo no se encuentra en la ruta: ${modelPath}`);
+        }
+        
+        // Verificar que es un modelo .keras válido
+        const contentType = response.headers.get('Content-Type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error(`⚠️ El contenido no es un modelo .keras válido (Content-Type: ${contentType})`);
+          throw new Error("El archivo no es un modelo .keras válido");
         }
         
         console.log(`✅ Modelo encontrado en: ${modelPath}`);
@@ -763,12 +754,10 @@
           <i class="fas fa-exclamation-triangle"></i> 
           <span>Modelo no disponible. Usando simulación realista.</span>
           <div style="font-size: 0.8rem; margin-top: 5px; color: #d32f2f;">
-            Para usar el modelo real:
-            <ul style="margin-top: 5px; text-align: left;">
-              <li>Verifica que el modelo está en /model/</li>
-              <li>Verifica que el repositorio es PÚBLICO</li>
-              <li>Accede directamente a: <a href="${modelPath}" target="_blank" style="color: #d32f2f;">${modelPath}</a></li>
-            </ul>
+            1. Verifica que el modelo está en <b>/mejor_modelo_libertador.keras</b>
+            2. El repositorio debe ser PÚBLICO
+            3. Visita directamente: <a href="${modelPath}" target="_blank" style="color: #d32f2f;">${modelPath}</a>
+            4. El modelo debe estar en formato .keras (Keras 3)
           </div>
         `;
         
