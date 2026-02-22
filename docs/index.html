@@ -718,86 +718,82 @@
     
     // ==================== CARGA DEL MODELO ====================
     async function loadModel() {
-      const statusEl = document.getElementById('model-status');
-      const btnAnalyze = document.getElementById('btn-analyze');
+  const statusEl = document.getElementById('model-status');
+  const btnAnalyze = document.getElementById('btn-analyze');
+  
+  try {
+    console.log("🔄 Iniciando carga del modelo CNN-LSTM...");
+    statusEl.className = "model-status loading";
+    statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelo CNN-LSTM...</span>`;
+    
+    // Verificar si estamos en GitHub Pages
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    
+    // Intentar con rutas correctas para GitHub Pages
+    let modelPath;
+    
+    if (isGitHubPages) {
+      // Para GitHub Pages (donde docs/ es la raíz)
+      modelPath = '/docs/model/mejor_modelo_libertador.keras';
       
-      try {
-        console.log("🔄 Iniciando carga del modelo CNN-LSTM...");
-        statusEl.className = "model-status loading";
-        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelo CNN-LSTM...</span>`;
+      // Verificar si el modelo existe
+      const response = await fetch(modelPath);
+      if (!response.ok) {
+        console.error(`❌ Modelo no encontrado en ${modelPath} (Status: ${response.status})`);
         
-        // Intentar cargar el modelo desde varias rutas posibles
-        const modelPaths = [
-          '/docs/model/mejor_modelo_libertador.keras',  // Para GitHub Pages
-          '/model/mejor_modelo_libertador.keras',      // Para rutas estándar
-          'docs/mejor_modelo_libertador.keras'        // Para rutas relativas
-        ];
-        
-        let modelLoadedSuccessfully = false;
-        
-        for (const path of modelPaths) {
-          try {
-            console.log(`🔍 Intentando cargar modelo desde: ${path}`);
-            const response = await fetch(path);
-            
-            if (!response.ok) {
-              console.log(`❌ Modelo no encontrado en: ${path} (Status: ${response.status})`);
-              continue;
-            }
-            
-            console.log(`✅ Modelo encontrado en: ${path}`);
-            
-            // Verificar que es un modelo .keras válido
-            const contentType = response.headers.get('Content-Type');
-            if (!contentType || !contentType.includes('application/json')) {
-              console.log(`⚠️ El contenido no es un modelo .keras válido`);
-              continue;
-            }
-            
-            // Cargar el modelo
-            model = await tf.loadLayersModel(path);
-            console.log("✅ Modelo CNN-LSTM cargado exitosamente");
-            
-            // Actualizar estado
-            statusEl.className = "model-status success";
-            statusEl.innerHTML = `<i class="fas fa-check-circle"></i> <span>Modelo CNN-LSTM listo para análisis</span>`;
-            modelLoaded = true;
-            
-            // Habilitar botón de análisis
-            btnAnalyze.disabled = false;
-            
-            modelLoadedSuccessfully = true;
-            break;
-          } catch (error) {
-            console.error(`❌ Error al cargar desde ${path}:`, error);
-          }
+        // Intentar con ruta alternativa
+        modelPath = '/model/mejor_modelo_libertador.keras';
+        const altResponse = await fetch(modelPath);
+        if (!altResponse.ok) {
+          throw new Error("Modelo no encontrado en ninguna ruta");
         }
-        
-        if (!modelLoadedSuccessfully) {
-          throw new Error("No se encontró el modelo en ninguna ruta");
-        }
-        
-        return true;
-      } catch (error) {
-        console.error("❌ Error al cargar el modelo:", error);
-        
-        // Mostrar estado de error pero habilitar botón con simulación
-        statusEl.className = "model-status error";
-        statusEl.innerHTML = `
-          <i class="fas fa-exclamation-triangle"></i> 
-          <span>Modelo no disponible. Usando simulación realista.</span>
-          <div style="font-size: 0.8rem; margin-top: 5px; color: #d32f2f;">
-            Para usar el modelo real: Verifica que el modelo está en /docs/model/
-          </div>
-        `;
-        
-        // Habilitar botón pero con advertencia
-        btnAnalyze.disabled = false;
-        modelLoaded = false;
-        
-        return false;
       }
+    } else {
+      // Para desarrollo local
+      modelPath = '/model/mejor_modelo_libertador.keras';
     }
+    
+    console.log(`✅ Modelo encontrado en: ${modelPath}`);
+    
+    // Cargar el modelo
+    model = await tf.loadLayersModel(modelPath);
+    
+    console.log("✅ Modelo CNN-LSTM cargado exitosamente");
+    
+    // Actualizar estado
+    statusEl.className = "model-status success";
+    statusEl.innerHTML = `<i class="fas fa-check-circle"></i> <span>Modelo CNN-LSTM listo para análisis</span>`;
+    modelLoaded = true;
+    
+    // Habilitar botón de análisis
+    btnAnalyze.disabled = false;
+    
+    return true;
+  } catch (error) {
+    console.error("❌ Error al cargar el modelo:", error);
+    
+    // Mostrar estado de error pero habilitar botón con simulación
+    statusEl.className = "model-status error";
+    statusEl.innerHTML = `
+      <i class="fas fa-exclamation-triangle"></i> 
+      <span>Modelo no disponible. Usando simulación realista.</span>
+      <div style="font-size: 0.8rem; margin-top: 5px; color: #d32f2f;">
+        Para usar el modelo real:
+        <ul style="margin-top: 5px; text-align: left;">
+          <li>Verifica que el modelo está en /docs/model/</li>
+          <li>Verifica que el repositorio es PÚBLICO</li>
+          <li>Accede directamente a: ${isGitHubPages ? '/docs/model/mejor_modelo_libertador.keras' : '/model/mejor_modelo_libertador.keras'}</li>
+        </ul>
+      </div>
+    `;
+    
+    // Habilitar botón pero con advertencia
+    btnAnalyze.disabled = false;
+    modelLoaded = false;
+    
+    return false;
+  }
+}
     
     // ==================== ANÁLISIS DE RIESGO ====================
     function analyzeRisk() {
