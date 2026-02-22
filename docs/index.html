@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script>
+  // Para evitar problemas de CORS con GitHub Pages
+  document.head.insertAdjacentHTML('beforeend', `
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; 
+      script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; 
+      style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; 
+      img-src 'self' data: https://*.tile.openstreetmap.org;
+      connect-src 'self' https://parseapi.back4app.com;
+      font-src 'self' https://fonts.gstatic.com;
+      frame-src 'self' https://www.youtube.com;
+      worker-src 'self' https://www.youtube.com">
+  `);
+</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GeoRiesgo Caracas - Sistema de Alerta Temprana</title>
