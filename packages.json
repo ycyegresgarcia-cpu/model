@@ -1,0 +1,11 @@
+{
+  "name": "georiesgo-caracas",
+  "version": "1.0.0",
+  "description": "Sistema de Alerta Temprana para Deslizamientos",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'No build needed'"
+  },
+  "author": "Tu Nombre",
+  "license": "MIT"
+}
