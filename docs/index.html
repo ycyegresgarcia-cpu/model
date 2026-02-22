@@ -523,7 +523,7 @@
           integrity="sha256-p4NxA76iV4Li19fHCp9I8l9Jj3V5k8Xm8cYHm6Q6qQ3j8=" 
           crossorigin=""></script>
   <script src="https://unpkg.com/parse@3.5.0/dist/parse.min.js"></script>
-  <!-- TensorFlow.js - Versión compatible con modelos Keras -->
+  <!-- TensorFlow.js - Versión compatible con modelos Keras 3 -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
   
   <script>
@@ -704,57 +704,87 @@
     }
     
     // ==================== CARGA DEL MODELO ====================
-   async function loadModel() {
-  try {
-    // Verificar si el modelo está en /docs/model/ (GitHub Pages)
-    const modelPath = '/docs/model/mejor_modelo_libertador.keras';
-    
-    console.log("🔄 Cargando modelo CNN-LSTM...");
-    console.log(`🔍 Intentando cargar desde: ${modelPath}`);
-    
-    // Verificar si el modelo existe
-    const response = await fetch(modelPath);
-    if (!response.ok) {
-      throw new Error(`El modelo no existe en ${modelPath} (Status: ${response.status})`);
-    }
-    
-   // Cargar el modelo
-    const model = await tf.loadLayersModel(modelPath);
-    console.log("✅ Modelo cargado exitosamente");
-    return model;
-  } catch (error) {
-    console.error("❌ Error al cargar el modelo:", error);
-    
-    // Intentar con ruta alternativa
-    try {
-      const altPath = '/model/mejor_modelo_libertador.keras';
-      console.log(`⚠️ Intentando ruta alternativa: ${altPath}`);
-      const model = await tf.loadLayersModel(altPath);
-      console.log("✅ Modelo cargado con ruta alternativa");
-      return model;
-    } catch (altError) {
-      console.error("❌ Error con ruta alternativa:", altError);
-      
-      // Mostrar error en la UI
+    async function loadModel() {
       const statusEl = document.getElementById('model-status');
-      statusEl.className = "model-status error";
-      statusEl.innerHTML = `
-        <i class="fas fa-exclamation-triangle"></i> 
-        <span>Modelo no disponible. Verifica:
-        <ul style="margin-top: 5px; text-align: left; font-size: 0.8rem;">
-          <li>La ruta correcta del modelo en GitHub Pages</li>
-          <li>Que el modelo esté en /docs/model/</li>
-          <li>Que el repositorio sea PÚBLICO</li>
-        </ul>
-        </span>
-      `;
+      const btnAnalyze = document.getElementById('btn-analyze');
       
-      // Habilitar botón de análisis
-      document.getElementById('btn-analyze').disabled = false;
-      return null;
+      try {
+        console.log("🔄 Iniciando carga del modelo CNN-LSTM...");
+        statusEl.className = "model-status loading";
+        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelo CNN-LSTM...</span>`;
+        
+        // Intentar cargar el modelo desde varias rutas posibles
+        const modelPaths = [
+          '/docs/model/mejor_modelo_libertador.keras',  // Para GitHub Pages
+          '/model/mejor_modelo_libertador.keras',      // Para rutas estándar
+          'model/mejor_modelo_libertador.keras'        // Para rutas relativas
+        ];
+        
+        let modelLoadedSuccessfully = false;
+        
+        for (const path of modelPaths) {
+          try {
+            console.log(`🔍 Intentando cargar modelo desde: ${path}`);
+            const response = await fetch(path);
+            
+            if (!response.ok) {
+              console.log(`❌ Modelo no encontrado en: ${path} (Status: ${response.status})`);
+              continue;
+            }
+            
+            console.log(`✅ Modelo encontrado en: ${path}`);
+            
+            // Verificar que es un modelo .keras válido
+            const contentType = response.headers.get('Content-Type');
+            if (!contentType || !contentType.includes('application/json')) {
+              console.log(`⚠️ El contenido no es un modelo .keras válido`);
+              continue;
+            }
+            
+            // Cargar el modelo
+            model = await tf.loadLayersModel(path);
+            console.log("✅ Modelo CNN-LSTM cargado exitosamente");
+            
+            // Actualizar estado
+            statusEl.className = "model-status success";
+            statusEl.innerHTML = `<i class="fas fa-check-circle"></i> <span>Modelo CNN-LSTM listo para análisis</span>`;
+            modelLoaded = true;
+            
+            // Habilitar botón de análisis
+            btnAnalyze.disabled = false;
+            
+            modelLoadedSuccessfully = true;
+            break;
+          } catch (error) {
+            console.error(`❌ Error al cargar desde ${path}:`, error);
+          }
+        }
+        
+        if (!modelLoadedSuccessfully) {
+          throw new Error("No se encontró el modelo en ninguna ruta");
+        }
+        
+        return true;
+      } catch (error) {
+        console.error("❌ Error al cargar el modelo:", error);
+        
+        // Mostrar estado de error pero habilitar botón con simulación
+        statusEl.className = "model-status error";
+        statusEl.innerHTML = `
+          <i class="fas fa-exclamation-triangle"></i> 
+          <span>Modelo no disponible. Usando simulación realista.</span>
+          <div style="font-size: 0.8rem; margin-top: 5px; color: #d32f2f;">
+            Para usar el modelo real: Verifica que el modelo está en /docs/model/
+          </div>
+        `;
+        
+        // Habilitar botón pero con advertencia
+        btnAnalyze.disabled = false;
+        modelLoaded = false;
+        
+        return false;
+      }
     }
-  }
-}
     
     // ==================== ANÁLISIS DE RIESGO ====================
     function analyzeRisk() {
