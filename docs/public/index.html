@@ -724,69 +724,62 @@
     
     // ==================== CARGA DEL MODELO ====================
     async function loadModel() {
-      const statusEl = document.getElementById('model-status');
-      const btnAnalyze = document.getElementById('btn-analyze');
-      
-      try {
-        console.log("🔄 Iniciando carga del modelo CNN-LSTM...");
-        statusEl.className = "model-status loading";
-        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelo CNN-LSTM...</span>`;
-        
-        // RUTA CORRECTA
-        const modelPath = '/model/mejor_modelo_libertador.keras';
-        
-        // Verificar si el modelo es accesible
-        const response = await fetch(modelPath);
-        if (!response.ok) {
-          console.error(`❌ Modelo no encontrado en ${modelPath} (Status: ${response.status})`);
-          throw new Error(`El modelo no se encuentra en la ruta: ${modelPath}`);
-        }
-        
-        // Verificar que es un modelo .keras válido
-        const contentType = response.headers.get('Content-Type');
-        if (!contentType || !contentType.includes('application/json')) {
-          console.error(`⚠️ El contenido no es un modelo .keras válido (Content-Type: ${contentType})`);
-          throw new Error("El archivo no es un modelo .keras válido");
-        }
-        
-        console.log(`✅ Modelo encontrado en: ${modelPath}`);
-        
-        // Cargar el modelo
-        model = await tf.loadLayersModel(modelPath);
-        console.log("✅ Modelo CNN-LSTM cargado exitosamente");
-        
-        // Actualizar estado
-        statusEl.className = "model-status success";
-        statusEl.innerHTML = `<i class="fas fa-check-circle"></i> <span>Modelo CNN-LSTM listo para análisis</span>`;
-        modelLoaded = true;
-        
-        // Habilitar botón de análisis
-        btnAnalyze.disabled = false;
-        
-        return true;
-      } catch (error) {
-        console.error("❌ Error al cargar el modelo:", error);
-        
-        // Mostrar estado de error pero habilitar botón con simulación
-        statusEl.className = "model-status error";
-        statusEl.innerHTML = `
-          <i class="fas fa-exclamation-triangle"></i> 
-          <span>Modelo no disponible. Usando simulación realista.</span>
-          <div style="font-size: 0.8rem; margin-top: 5px; color: #d32f2f;">
-            1. Verifica que el modelo está en <b>/mejor_modelo_libertador.keras</b>
-            2. El repositorio debe ser PÚBLICO
-            3. Visita directamente: <a href="${modelPath}" target="_blank" style="color: #d32f2f;">${modelPath}</a>
-            4. El modelo debe estar en formato .keras (Keras 3)
-          </div>
-        `;
-        
-        // Habilitar botón pero con advertencia
-        btnAnalyze.disabled = false;
-        modelLoaded = false;
-        
-        return false;
-      }
+  try {
+    console.log("🔄 Cargando modelo CNN-LSTM...");
+    const statusEl = document.getElementById('model-status');
+    statusEl.className = "model-status loading";
+    statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelo CNN-LSTM...</span>`;
+    
+    // RUTA CORRECTA para Netlify
+    const modelPath = '/model/mejor_modelo_libertador.keras';
+    
+    // Verificar si el modelo es accesible
+    console.log(`🔍 Verificando modelo en: ${modelPath}`);
+    const response = await fetch(modelPath);
+    
+    if (!response.ok) {
+      console.error(`❌ Modelo no encontrado en ${modelPath} (Status: ${response.status})`);
+      throw new Error(`El modelo no se encuentra en la ruta: ${modelPath}`);
     }
+    
+    // Cargar el modelo
+    model = await tf.loadLayersModel(modelPath);
+    console.log("✅ Modelo CNN-LSTM cargado exitosamente");
+    
+    // Actualizar estado
+    statusEl.className = "model-status success";
+    statusEl.innerHTML = `<i class="fas fa-check-circle"></i> <span>Modelo CNN-LSTM listo para análisis</span>`;
+    modelLoaded = true;
+    
+    // Habilitar botón de análisis
+    document.getElementById('btn-analyze').disabled = false;
+    
+    return true;
+  } catch (error) {
+    console.error("❌ Error al cargar el modelo:", error);
+    
+    // Mostrar estado de error
+    const statusEl = document.getElementById('model-status');
+    statusEl.className = "model-status error";
+    statusEl.innerHTML = `
+      <i class="fas fa-exclamation-triangle"></i> 
+      <span>Modelo no disponible. Verifica:</span>
+      <div style="font-size: 0.8rem; margin-top: 5px; color: #d32f2f;">
+        1. El modelo está en <b>/model/mejor_modelo_libertador.keras</b>
+        2. El repositorio es PÚBLICO
+        3. Visita directamente: <a href="${modelPath}" target="_blank" style="color: #d32f2f;">${modelPath}</a>
+        4. El modelo debe estar en formato .keras (Keras 3)
+        5. Error detallado: <span style="font-size: 0.7rem; color: #b71c1c;">${error.message}</span>
+      </div>
+    `;
+    
+    // Habilitar botón pero con advertencia
+    document.getElementById('btn-analyze').disabled = false;
+    modelLoaded = false;
+    
+    return false;
+  }
+}
     
     // ==================== ANÁLISIS DE RIESGO ====================
     function analyzeRisk() {
