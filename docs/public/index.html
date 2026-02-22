@@ -730,7 +730,7 @@
     statusEl.className = "model-status loading";
     statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelo CNN-LSTM...</span>`;
     
-    // RUTA CORRECTA para Netlify
+    // RUTA CORRECTA: El modelo está en /model/ (no en /model/docs/)
     const modelPath = '/model/mejor_modelo_libertador.keras';
     
     // Verificar si el modelo es accesible
