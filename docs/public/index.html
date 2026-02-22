@@ -708,21 +708,20 @@
       const statusEl = document.getElementById('model-status');
       const btnAnalyze = document.getElementById('btn-analyze');
       
-      try {
-        console.log("🔄 Iniciando carga del modelo CNN-LSTM...");
-        statusEl.className = "model-status loading";
-        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelo CNN-LSTM...</span>`;
-        
-        // Verificar si el modelo es accesible en la ruta correcta
-        const modelPath = '/docs/model/mejor_modelo_libertador.keras';
-        console.log(`🔍 Verificando modelo en: ${modelPath}`);
-        
-        // Primera verificación: Verificar si el modelo es accesible
-        const response = await fetch(modelPath);
-        if (!response.ok) {
-          console.error(`❌ Modelo no encontrado en ${modelPath} (Status: ${response.status})`);
-          throw new Error(`El modelo no se encuentra en la ruta: ${modelPath}`);
-        }
+      async function loadModel() {
+  try {
+    console.log("🔄 Cargando modelo CNN-LSTM...");
+    
+    // CORREGIDO: El modelo está en la raíz del sitio web
+    const model = await tf.loadLayersModel('/mejor_modelo_libertador.keras');
+    
+    console.log("✅ Modelo cargado exitosamente");
+    return model;
+  } catch (error) {
+    console.error("❌ Error al cargar el modelo:", error);
+    // ... manejo de errores ...
+  }
+}
         
         // Segunda verificación: Verificar que es un modelo .keras válido
         const contentType = response.headers.get('Content-Type');
