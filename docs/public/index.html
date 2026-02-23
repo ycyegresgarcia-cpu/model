@@ -724,26 +724,40 @@
     
     // ==================== CARGA DEL MODELO ====================
     async function loadModel() {
+  const statusEl = document.getElementById('model-status');
+  const btnAnalyze = document.getElementById('btn-analyze');
+  
+  const APP_ID = "YgjmGwaGtyYUZnGloT0syTs7NXHilTDrf0oOH8nz";
+  const JS_KEY = "gmc7eoAhx2naPTHnLRwl7CYEGA8Gm2YN1stgOYXe";
+  
+  const SERVER_URL = "https://parseapi.back4app.com/";
+  
+  Parse.initialize(APP_ID, JS_KEY);
+  Parse.serverURL = SERVER_URL;
+  
   try {
-    console.log("🔄 Cargando modelo CNN-LSTM...");
-    const statusEl = document.getElementById('model-status');
+    console.log("🔄 Cargando modelo desde Back4App...");
     statusEl.className = "model-status loading";
     statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>Cargando modelo CNN-LSTM...</span>`;
     
-    // RUTA CORRECTA: El modelo está en /model/ (no en /model/docs/)
-    const modelPath = '/model/mejor_modelo_libertador.keras';
+    // Obtener URL del modelo
+    const query = new Parse.Query("ModelFiles");
+    query.equalTo("filename", "mejor_modelo_libertador.keras");
+    query.descending("createdAt");
     
-    // Verificar si el modelo es accesible
-    console.log(`🔍 Verificando modelo en: ${modelPath}`);
-    const response = await fetch(modelPath);
+    const modelFile = await query.first();
     
-    if (!response.ok) {
-      console.error(`❌ Modelo no encontrado en ${modelPath} (Status: ${response.status})`);
-      throw new Error(`El modelo no se encuentra en la ruta: ${modelPath}`);
+    if (!modelFile) {
+      throw new Error("Modelo no encontrado en Back4App");
     }
     
+    const file = modelFile.get("file");
+    const modelUrl = file.url();
+    
+    console.log(`✅ Modelo encontrado en: ${modelUrl}`);
+    
     // Cargar el modelo
-    model = await tf.loadLayersModel(modelPath);
+    model = await tf.loadLayersModel(modelUrl);
     console.log("✅ Modelo CNN-LSTM cargado exitosamente");
     
     // Actualizar estado
@@ -752,29 +766,27 @@
     modelLoaded = true;
     
     // Habilitar botón de análisis
-    document.getElementById('btn-analyze').disabled = false;
+    btnAnalyze.disabled = false;
     
     return true;
   } catch (error) {
     console.error("❌ Error al cargar el modelo:", error);
     
     // Mostrar estado de error
-    const statusEl = document.getElementById('model-status');
     statusEl.className = "model-status error";
     statusEl.innerHTML = `
       <i class="fas fa-exclamation-triangle"></i> 
       <span>Modelo no disponible. Verifica:</span>
       <div style="font-size: 0.8rem; margin-top: 5px; color: #d32f2f;">
-        1. El modelo está en <b>/model/mejor_modelo_libertador.keras</b>
-        2. El repositorio es PÚBLICO
-        3. Visita directamente: <a href="${modelPath}" target="_blank" style="color: #d32f2f;">${modelPath}</a>
-        4. El modelo debe estar en formato .keras (Keras 3)
-        5. Error detallado: <span style="font-size: 0.7rem; color: #b71c1c;">${error.message}</span>
+        1. El modelo está subido a Back4App en la clase "ModelFiles"
+        2. El campo "filename" es "mejor_modelo_libertador.keras"
+        3. La clase "ModelFiles" tiene permisos correctos
+        4. Error detallado: <span style="font-size: 0.7rem; color: #b71c1c;">${error.message}</span>
       </div>
     `;
     
     // Habilitar botón pero con advertencia
-    document.getElementById('btn-analyze').disabled = false;
+    btnAnalyze.disabled = false;
     modelLoaded = false;
     
     return false;
